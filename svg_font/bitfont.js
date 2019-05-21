@@ -4,9 +4,23 @@ let context = canvas.getContext("2d");
 // context.rect(20, 20, 150, 100);
 // context.stroke();
 
-function printText(ctx, w, h, s) {
-    const cell_width = 4;
-    const cell_height = 4;
+const format2 = {
+    colors: [[0xdd,0xdd,0xdd],[0,0,0]],
+    numbits: 1,
+    numlines: 5
+};
+const format8 = {
+    colors: [[0,0,0],[0xff,0,0],[0,0xff,0],[0,0,0xff],[0x77,0x77,0],[0x77,0,0x77],[0,0x77,0x77],[0xdd, 0xdd, 0xdd]],
+    numbits: 3,
+    numlines: 2
+}
+
+function printText(ctx, w, h, s, format, cw, ch) {
+    const numbits = format.numbits;
+    const numlines = format.numlines;
+    const bitmask = (1 << numbits) - 1;
+    const cell_width = cw;
+    const cell_height = ch;
     let imageData = ctx.getImageData(0, 0, w, h);
     let data = imageData.data;
     let row = 0;
@@ -15,17 +29,12 @@ function printText(ctx, w, h, s) {
     function fillDot(bx, by, color) {
         for (let dy = 0; dy < cell_height; dy++) {
             let addr = (by * w + bx) * 4;
-            let dx;
-            for (dx = 0; dx < (cell_width * 4); dx += 4) {
-                data[addr + dx + 0] = color;
-                data[addr + dx + 1] = color;
-                data[addr + dx + 2] = color;
+            for (let dx = 0; dx < (cell_width * 4); dx += 4) {
+                data[addr + dx + 0] = color[0];
+                data[addr + dx + 1] = color[1];
+                data[addr + dx + 2] = color[2];
                 data[addr + dx + 3] = 0xff;
             }
-            // data[addr + dx + 0] = 0xff;
-            // data[addr + dx + 1] = 0xff;
-            // data[addr + dx + 2] = 0xff;
-            // data[addr + dx + 3] = 0xff;
             by++;
         }
     }
@@ -35,7 +44,6 @@ function printText(ctx, w, h, s) {
         if (c == 10) {
             col = 0;
             row++;
-            console.log("ENTER");
         }
         else {
             console.log(c);
@@ -47,25 +55,21 @@ function printText(ctx, w, h, s) {
                     break;
             }
             // Bit pattern
-            let by = row * cell_height * 6;
+            let by = row * cell_height * (numlines + 1);
             let bx = col * cell_width;
-            for (let bi = 0; bi < 5; bi++) {
+            for (let bi = 0; bi < numlines; bi++) {
                 let color;
                 if (space) {
-                    color = 0xff;
+                    color = [0xff, 0xff, 0xff];
                 }
                 else {
-                    if (c & 1) {
-                        color = 0x00;
-                    }
-                    else {
-                        color = 0xdd;
-                    }    
+                    let m = c & bitmask;
+                    color = format.colors[m];
                 }
                 // Draw the dot
                 fillDot(bx, by, color);
                 by += cell_height;
-                c = c >> 1;
+                c = c >> numbits;
             }
             col++
         }
@@ -82,4 +86,4 @@ It may be used to display a sample of fonts, generate text
 for testing, or to spoof an e-mail spam filter.
 The process of using filler text is sometimes called greeking,
 although the text itself may be nonsense, or largely Latin,
-as in Lorem ipsum.`);
+as in Lorem ipsum.`, format2, 4, 4);
